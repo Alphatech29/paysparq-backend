@@ -1,53 +1,64 @@
-const pool = require('../model/db');
-const bcrypt = require('bcrypt');
-const crypto = require('crypto');
+const pool = require("../model/db");
+const bcrypt = require("bcrypt");
+const crypto = require("crypto");
 
-// Default expiration times
-const ACCESS_TOKEN_LIFETIME = 60 * 60 * 1000;
-const REFRESH_TOKEN_LIFETIME = 30 * 24 * 60 * 60 * 1000;
+// Token lifetimes
+const ACCESS_TOKEN_LIFETIME = 15 * 60 * 1000; // 15 min
+const REFRESH_TOKEN_LIFETIME = 24 * 60 * 60 * 1000; // 24 hours
 
-// --- Helper to generate secure random tokens ---
+// ---------------- HELPERS ----------------
 function generateToken() {
-  return crypto.randomBytes(40).toString('hex');
+  return crypto.randomBytes(40).toString("hex");
 }
 
+function hashToken(token) {
+  return crypto.createHash("sha256").update(token).digest("hex");
+}
+
+// ---------------- CLIENT ----------------
 async function getClient(clientId) {
-  try {
-    return {
-      id: clientId,
-      grants: ['password', 'refresh_token'],
-      redirectUris: []
-    };
-  } catch (err) {
-    console.error('Error fetching client:', err);
-    return null;
-  }
+  if (!clientId) return null;
+
+  return {
+    id: clientId,
+    grants: ["password", "refresh_token"],
+    redirectUris: [],
+  };
 }
 
+// ---------------- SAVE TOKEN ----------------
 async function saveToken(client, user) {
   try {
     const now = new Date();
+
     const accessToken = generateToken();
     const refreshToken = generateToken();
-    const accessTokenExpiresAt = new Date(now.getTime() + ACCESS_TOKEN_LIFETIME);
-    const refreshTokenExpiresAt = new Date(now.getTime() + REFRESH_TOKEN_LIFETIME);
 
-    const query = `
+    const hashedRefreshToken = hashToken(refreshToken);
+
+    const accessTokenExpiresAt = new Date(now.getTime() + ACCESS_TOKEN_LIFETIME);
+    const refreshTokenExpiresAt = new Date(
+      now.getTime() + REFRESH_TOKEN_LIFETIME
+    );
+
+    await pool.query(
+      `
       INSERT INTO p_oauth_tokens 
         (uid, access_token, access_token_expires_on, refresh_token, refresh_token_expires_on, user_uid, client_id, created_at)
       VALUES 
         (UUID(), ?, ?, ?, ?, ?, ?, NOW())
-    `;
-    await pool.query(query, [
-      accessToken,
-      accessTokenExpiresAt,
-      refreshToken,
-      refreshTokenExpiresAt,
-      user.uid,
-      client.id
-    ]);
+      `,
+      [
+        accessToken,
+        accessTokenExpiresAt,
+        hashedRefreshToken,
+        refreshTokenExpiresAt,
+        user.uid,
+        client.id,
+      ]
+    );
 
-    cleanupExpiredTokens().catch(err => console.error('Token cleanup error:', err));
+    cleanupExpiredTokens().catch(() => {});
 
     return {
       success: true,
@@ -56,121 +67,137 @@ async function saveToken(client, user) {
         accessTokenExpiresAt,
         refreshToken,
         refreshTokenExpiresAt,
-        client: { id: client.id },
-        user: { uid: user.uid }
-      }
+      },
     };
   } catch (err) {
-    console.error('Error saving token:', err);
-    return { success: false, error: 'Unable to save token' };
+    console.error("Error saving token:", err);
+    return { success: false, error: "Unable to save token" };
   }
 }
 
+// ---------------- ACCESS TOKEN ----------------
 async function getAccessToken(accessToken) {
   try {
     const [rows] = await pool.query(
-      `SELECT * FROM p_oauth_tokens WHERE access_token = ?`,
+      `
+      SELECT user_uid, client_id
+      FROM p_oauth_tokens
+      WHERE access_token = ?
+        AND access_token_expires_on > NOW()
+      `,
       [accessToken]
     );
-    if (!rows.length) return { success: false, error: 'Token not found' };
 
-    const token = rows[0];
+    if (!rows.length) {
+      return { success: false };
+    }
+
     return {
       success: true,
       data: {
-        accessToken: token.access_token,
-        accessTokenExpiresAt: token.access_token_expires_on,
-        refreshToken: token.refresh_token,
-        refreshTokenExpiresAt: token.refresh_token_expires_on,
-        client: { id: token.client_id },
-        user: { uid: token.user_uid }
-      }
+        user: { uid: rows[0].user_uid },
+        client: { id: rows[0].client_id },
+      },
     };
   } catch (err) {
-    console.error('Error fetching access token:', err);
-    return { success: false, error: 'Unable to fetch access token' };
+    console.error("Error fetching access token:", err);
+    return { success: false };
   }
 }
 
+// ---------------- REFRESH TOKEN ----------------
 async function getRefreshToken(refreshToken) {
   try {
-    const [rows] = await pool.query(
-      `SELECT * FROM p_oauth_tokens WHERE refresh_token = ?`,
-      [refreshToken]
-    );
-    if (!rows.length) return { success: false, error: 'Token not found' };
+    const hashed = hashToken(refreshToken);
 
-    const token = rows[0];
-    return {
-      success: true,
-      data: {
-        refreshToken: token.refresh_token,
-        refreshTokenExpiresAt: token.refresh_token_expires_on,
-        client: { id: token.client_id },
-        user: { uid: token.user_uid }
-      }
-    };
+    const [rows] = await pool.query(
+      `
+      SELECT *
+      FROM p_oauth_tokens
+      WHERE refresh_token = ?
+        AND refresh_token_expires_on > NOW()
+      `,
+      [hashed]
+    );
+
+    if (!rows.length) {
+      return { success: false };
+    }
+
+    return { success: true, data: rows[0] };
   } catch (err) {
-    console.error('Error fetching refresh token:', err);
-    return { success: false, error: 'Unable to fetch refresh token' };
+    console.error("Error fetching refresh token:", err);
+    return { success: false };
   }
 }
 
-async function revokeToken(token) {
+// ---------------- REVOKE SINGLE TOKEN ----------------
+async function revokeToken(refreshToken) {
   try {
+    const hashed = hashToken(refreshToken);
+
     const [result] = await pool.query(
       `DELETE FROM p_oauth_tokens WHERE refresh_token = ?`,
-      [token.refreshToken]
+      [hashed]
     );
+
     return { success: true, revoked: result.affectedRows > 0 };
   } catch (err) {
-    console.error('Error revoking token:', err);
-    return { success: false, revoked: false, error: 'Unable to revoke token' };
+    console.error("Error revoking token:", err);
+    return { success: false };
   }
 }
 
+// ---------------- REVOKE ALL USER TOKENS (CRITICAL) ----------------
+async function revokeAllUserTokens(userUid) {
+  try {
+    await pool.query(
+      `DELETE FROM p_oauth_tokens WHERE user_uid = ?`,
+      [userUid]
+    );
+
+    return { success: true };
+  } catch (err) {
+    console.error("Error revoking all user tokens:", err);
+    return { success: false };
+  }
+}
+
+// ---------------- CLEANUP ----------------
 async function cleanupExpiredTokens() {
   try {
-    const now = new Date();
     await pool.query(
-      `DELETE FROM p_oauth_tokens
-       WHERE access_token_expires_on <= ?
-          OR refresh_token_expires_on <= ?`,
-      [now, now]
+      `
+      DELETE FROM p_oauth_tokens
+      WHERE refresh_token_expires_on <= NOW()
+      `
     );
   } catch (err) {
-    console.error('Error cleaning up expired tokens:', err);
+    console.error("Cleanup error:", err);
   }
 }
 
-async function getUserByEmail(email) {
+// ---------------- USER ----------------
+async function getUser(email, password) {
   try {
     const [rows] = await pool.query(
-      `SELECT * FROM p_users WHERE email = ?`,
+      `SELECT uid, email, password FROM p_users WHERE email = ?`,
       [email]
     );
 
     if (!rows.length) return null;
 
     const user = rows[0];
-    return { uid: user.uid,  email: user.email,  password: user.password };
-  } catch (err) {
-    console.error('Error fetching user by email:', err);
-    return null;
-  }
-}
-
-async function getUser(email, password) {
-  try {
-    const user = await getUserByEmail(email);
-    if (!user) return null;
-
     const isValid = await bcrypt.compare(password, user.password);
-    if (!isValid) return false;
 
-    return { uid: user.uid, email: user.email };
+    if (!isValid) return null;
+
+    return {
+      uid: user.uid,
+      email: user.email,
+    };
   } catch (err) {
-    console.error('Error fetching user:', err);
+    console.error("Error fetching user:", err);
     return null;
   }
 }
@@ -181,7 +208,7 @@ module.exports = {
   getAccessToken,
   getRefreshToken,
   revokeToken,
+  revokeAllUserTokens,
   getUser,
-  getUserByEmail,
-  cleanupExpiredTokens
+  cleanupExpiredTokens,
 };

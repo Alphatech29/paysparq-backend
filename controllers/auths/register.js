@@ -2,11 +2,11 @@
 const { createUser } = require("../../utilities/auth");
 
 const registerUser = async (req, res) => {
-  const { full_name, email, password, phone_number } = req.body;
+  const { full_name, email, password, phone_number, username } = req.body;
+  console.log("Registering user with data:", req.body);
 
   try {
-    const result = await createUser(full_name, email, password, phone_number);
-
+    const result = await createUser(full_name, email, password, phone_number, username);
     if (!result.success) {
       // Map errors to HTTP status codes
       let statusCode = 400;

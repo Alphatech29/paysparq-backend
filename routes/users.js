@@ -1,5 +1,5 @@
 const express = require("express");
-const { getUserWallet } = require("../controllers/users/wallet");
+const { getUserWallet, getDedicatedAccount } = require("../controllers/users/wallet");
 const { getUserController } = require("../controllers/users/user");
 const { requireAuth } = require("../middleware/requireAuth");
 const { getAllGiftcardProductsController, getAllCountriesController, getGiftcardProductByIdController } = require("../controllers/users/giftcard");
@@ -10,6 +10,7 @@ const { createTransactionPinController, changeTransactionPinController } = requi
 const { getGiftcardBrands } = require("../controllers/users/sellGiftcard");
 const { tradeGiftController } = require("../controllers/users/tradeGift");
 const { getUserTransactions } = require("../controllers/users/history");
+const { paystackWebhook } = require("../utilities/paystackWebhook");
 
 const userRoute = express.Router();
 
@@ -27,5 +28,7 @@ userRoute.post("/change-pin", requireAuth, changeTransactionPinController)
 userRoute.get("/get-giftcard", getGiftcardBrands)
 userRoute.post("/trade-card", requireAuth, tradeGiftController)
 userRoute.get("/history", requireAuth, getUserTransactions)
+userRoute.get("/dedicated-account", requireAuth, getDedicatedAccount)
+userRoute.post("/web-hook", paystackWebhook),
 
 module.exports = userRoute;

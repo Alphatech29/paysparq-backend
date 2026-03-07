@@ -16,6 +16,21 @@ const getWalletByUserId = async (userId) => {
 };
 
 
+/* Get Dedicated Account By User ID */
+
+const getDedicatedAccountByUserId = async (uid) => {
+  const sql = `
+    SELECT *
+    FROM p_dedicated_accounts
+    WHERE uid = ?
+    LIMIT 1
+  `;
+
+  const [rows] = await pool.execute(sql, [uid]);
+
+  return rows.length ? rows[0] : null;
+};
+
 /* Safe Debit Wallet */
 
 const debitWallet = async (userId, amount) => {
@@ -54,6 +69,7 @@ const creditWallet = async (userId, amount) => {
 
 module.exports = {
   getWalletByUserId,
+  getDedicatedAccountByUserId,
   debitWallet,
   creditWallet
 };

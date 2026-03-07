@@ -1,0 +1,7 @@
+{
+  "watch": ["."],
+  "ignore": [
+    "**/otp-storage.json",
+    "**/*.json"
+  ]
+}

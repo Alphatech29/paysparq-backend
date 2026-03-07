@@ -1,12 +1,14 @@
 const pool = require("../model/db");
 const bcrypt = require("bcrypt");
 const crypto = require("crypto");
+const jwt = require("jsonwebtoken");
 
-// Token lifetimes
-const ACCESS_TOKEN_LIFETIME = 15 * 60 * 1000; // 15 min
-const REFRESH_TOKEN_LIFETIME = 24 * 60 * 60 * 1000; // 24 hours
+// ================= CONFIG =================
+const JWT_SECRET = process.env.JWT_SECRET;
+const ACCESS_TOKEN_LIFETIME = "30m";
+const REFRESH_TOKEN_LIFETIME_MS = 24 * 60 * 60 * 1000;
 
-// ---------------- HELPERS ----------------
+// ================= HELPERS =================
 function generateToken() {
   return crypto.randomBytes(40).toString("hex");
 }
@@ -15,7 +17,7 @@ function hashToken(token) {
   return crypto.createHash("sha256").update(token).digest("hex");
 }
 
-// ---------------- CLIENT ----------------
+// ================= CLIENT =================
 async function getClient(clientId) {
   if (!clientId) return null;
 
@@ -26,31 +28,41 @@ async function getClient(clientId) {
   };
 }
 
-// ---------------- SAVE TOKEN ----------------
+// ================= SAVE TOKEN =================
 async function saveToken(client, user) {
   try {
     const now = new Date();
 
-    const accessToken = generateToken();
-    const refreshToken = generateToken();
-
-    const hashedRefreshToken = hashToken(refreshToken);
-
-    const accessTokenExpiresAt = new Date(now.getTime() + ACCESS_TOKEN_LIFETIME);
-    const refreshTokenExpiresAt = new Date(
-      now.getTime() + REFRESH_TOKEN_LIFETIME
+    // 🔐 Create JWT Access Token
+    const accessToken = jwt.sign(
+      {
+        uid: user.uid,
+        email: user.email,
+        is_email_verified: user.is_email_verified,
+        client_id: client.id,
+      },
+      JWT_SECRET,
+      { expiresIn: ACCESS_TOKEN_LIFETIME }
     );
 
+    // 🔁 Generate refresh token
+    const refreshToken = generateToken();
+    const hashedRefreshToken = hashToken(refreshToken);
+
+    const refreshTokenExpiresAt = new Date(
+      now.getTime() + REFRESH_TOKEN_LIFETIME_MS
+    );
+
+    // Store refresh token (NOT access token validation anymore)
     await pool.query(
       `
       INSERT INTO p_oauth_tokens 
         (uid, access_token, access_token_expires_on, refresh_token, refresh_token_expires_on, user_uid, client_id, created_at)
       VALUES 
-        (UUID(), ?, ?, ?, ?, ?, ?, NOW())
+        (UUID(), ?, DATE_ADD(NOW(), INTERVAL 15 MINUTE), ?, ?, ?, ?, NOW())
       `,
       [
         accessToken,
-        accessTokenExpiresAt,
         hashedRefreshToken,
         refreshTokenExpiresAt,
         user.uid,
@@ -64,7 +76,6 @@ async function saveToken(client, user) {
       success: true,
       data: {
         accessToken,
-        accessTokenExpiresAt,
         refreshToken,
         refreshTokenExpiresAt,
       },
@@ -75,37 +86,30 @@ async function saveToken(client, user) {
   }
 }
 
-// ---------------- ACCESS TOKEN ----------------
-async function getAccessToken(accessToken) {
+// ================= VERIFY ACCESS TOKEN =================
+async function getAccessToken(token) {
   try {
-    const [rows] = await pool.query(
-      `
-      SELECT user_uid, client_id
-      FROM p_oauth_tokens
-      WHERE access_token = ?
-        AND access_token_expires_on > NOW()
-      `,
-      [accessToken]
-    );
-
-    if (!rows.length) {
-      return { success: false };
-    }
+    const decoded = jwt.verify(token, JWT_SECRET);
 
     return {
       success: true,
       data: {
-        user: { uid: rows[0].user_uid },
-        client: { id: rows[0].client_id },
+        user: {
+          uid: decoded.uid,
+          email: decoded.email,
+          is_email_verified: decoded.is_email_verified,
+        },
+        client: {
+          id: decoded.client_id,
+        },
       },
     };
   } catch (err) {
-    console.error("Error fetching access token:", err);
     return { success: false };
   }
 }
 
-// ---------------- REFRESH TOKEN ----------------
+// ================= REFRESH TOKEN =================
 async function getRefreshToken(refreshToken) {
   try {
     const hashed = hashToken(refreshToken);
@@ -120,9 +124,7 @@ async function getRefreshToken(refreshToken) {
       [hashed]
     );
 
-    if (!rows.length) {
-      return { success: false };
-    }
+    if (!rows.length) return { success: false };
 
     return { success: true, data: rows[0] };
   } catch (err) {
@@ -131,7 +133,7 @@ async function getRefreshToken(refreshToken) {
   }
 }
 
-// ---------------- REVOKE SINGLE TOKEN ----------------
+// ================= REVOKE TOKEN =================
 async function revokeToken(refreshToken) {
   try {
     const hashed = hashToken(refreshToken);
@@ -148,7 +150,7 @@ async function revokeToken(refreshToken) {
   }
 }
 
-// ---------------- REVOKE ALL USER TOKENS (CRITICAL) ----------------
+// ================= REVOKE ALL USER TOKENS =================
 async function revokeAllUserTokens(userUid) {
   try {
     await pool.query(
@@ -163,7 +165,7 @@ async function revokeAllUserTokens(userUid) {
   }
 }
 
-// ---------------- CLEANUP ----------------
+// ================= CLEANUP =================
 async function cleanupExpiredTokens() {
   try {
     await pool.query(
@@ -177,11 +179,13 @@ async function cleanupExpiredTokens() {
   }
 }
 
-// ---------------- USER ----------------
+// ================= USER AUTH =================
 async function getUser(email, password) {
   try {
     const [rows] = await pool.query(
-      `SELECT uid, email, password FROM p_users WHERE email = ?`,
+      `SELECT uid, email, password, is_email_verified 
+       FROM p_users
+       WHERE email = ?`,
       [email]
     );
 
@@ -195,9 +199,10 @@ async function getUser(email, password) {
     return {
       uid: user.uid,
       email: user.email,
+      is_email_verified: user.is_email_verified,
     };
   } catch (err) {
-    console.error("Error fetching user:", err);
+    console.error("Error fetching user:", err.message);
     return null;
   }
 }

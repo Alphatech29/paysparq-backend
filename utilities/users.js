@@ -3,16 +3,7 @@ const pool = require("../model/db");
 const getUserByUid = async (uid) => {
   try {
     const sql = `
-      SELECT
-        uid,
-        avatar,
-        full_name,
-        username,
-        email,
-        phone_number,
-        status,
-        is_kyc_verified,
-        created_at
+      SELECT *
       FROM p_users
       WHERE uid = ?
       LIMIT 1

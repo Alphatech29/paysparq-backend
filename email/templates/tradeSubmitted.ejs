@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gift Card Trade Submitted</title>
+
+<style>
+  body{
+    margin:0;
+    padding:0;
+    background:#f2f4f7;
+    font-family:Arial, Helvetica, sans-serif;
+  }
+
+  @media only screen and (max-width:600px){
+    .container{width:100%!important}
+    .content{padding:24px!important}
+  }
+</style>
+</head>
+
+<body>
+
+<!-- Outer Wrapper -->
+<div style="padding:30px 10px;background:#f2f4f7;">
+
+  <!-- Main Email Container -->
+  <div class="container" style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:10px;overflow:hidden;">
+
+    <!-- Header -->
+    <div style="background:#012b8b;padding:28px;text-align:center;">
+      <img src="<%= webUrl %><%= logoUrl %>" width="120" alt="Trade Gift Card">
+    </div>
+
+    <!-- Email Content -->
+    <div class="content" style="padding:40px;color:#334155;">
+
+      <h2 style="margin:0 0 10px;color:#0f172a;">
+        Gift Card Trade Submitted
+      </h2>
+
+      <p style="font-size:14px;line-height:22px;">
+        Hello <strong><%= name %></strong>,
+      </p>
+
+      <p style="font-size:14px;line-height:22px;">
+        Your gift card trade request has been successfully submitted and is currently being reviewed by our team.
+      </p>
+
+      <!-- Trade Details -->
+      <div style="background:#f8fafc;padding:20px;border-radius:8px;margin-top:20px;font-size:14px;">
+
+        <p><strong>Reference:</strong> <%= reference %></p>
+        <p><strong>Gift Card:</strong> <%= brand_name %></p>
+        <p><strong>Category:</strong> <%= sub_category_name %></p>
+        <p><strong>Card Value:</strong> <%= currency %><%= amount %></p>
+        <p><strong>Rate:</strong> <%= rate %>/1<%= currency %></p>
+        <p><strong>Fee:</strong> ₦<%= fee %></p>
+        <p><strong>Amount To Receive:</strong> ₦<%= final_amount %></p>
+        <p><strong>Status:</strong> Processing</p>
+
+      </div>
+
+      <p style="margin-top:20px;font-size:14px;">
+        Once the review is completed, your wallet will be credited automatically.
+      </p>
+
+      <p style="font-size:13px;color:#64748b;">
+        Please do not open another trade for the same card while this one is being processed.
+      </p>
+
+    </div>
+
+    <!-- Support Section -->
+    <div style="padding:0 40px 30px;font-size:13px;color:#475569;">
+      Need help? Contact us at 
+      <a href="mailto:<%= supportEmail %>" style="color:#2563eb;text-decoration:none;">
+        <%= supportEmail %>
+      </a>
+    </div>
+
+    <!-- Footer -->
+    <div style="background:#f8fafc;padding:30px 40px;color:#475569;font-size:13px;line-height:20px;">
+
+      <!-- Brand -->
+      <div style="text-align:center;margin-bottom:15px;">
+        <strong style="color:#0f172a;font-size:14px;">Trade Gift Card</strong><br>
+        <span style="color:#64748b;">
+          Secure & Reliable Gift Card Trading Platform
+        </span>
+      </div>
+
+      <!-- Divider -->
+      <div style="height:1px;background:#e2e8f0;margin:15px 0;"></div>
+
+      <!-- Security Notice -->
+      <div style="text-align:center;color:#64748b;">
+        <p style="margin:0;">
+          Security Notice: Trade Gift Card will never request your password,
+          OTP, or sensitive account information via email.
+        </p>
+      </div>
+
+      <!-- Divider -->
+      <div style="height:1px;background:#e2e8f0;margin:18px 0;"></div>
+
+      <!-- Legal -->
+      <div style="text-align:center;color:#94a3b8;font-size:12px;">
+        <p style="margin:0;">
+          © <%= new Date().getFullYear() %> Trade Gift Card. All rights reserved.
+        </p>
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+</body>
+</html>

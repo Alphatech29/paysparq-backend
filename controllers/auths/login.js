@@ -1,63 +1,79 @@
 const { getUser, getClient, saveToken } = require("../../utilities/oauthModel");
 
 async function login(req, res) {
+  const start = Date.now();
+
   try {
     const { email, password } = req.body;
 
+    console.log("Login attempt:", {
+      email,
+      password,
+    });
+
     // Validate input
     if (!email || !password) {
-      console.warn(" LOGIN FAILED: Missing email or password");
-
       return res.status(400).json({
         success: false,
-        error: "Email and password are required",
+        message: "Validation failed",
+        error: {
+          code: "MISSING_CREDENTIALS",
+          detail: "Email and password are required",
+        },
       });
     }
 
-    //  Authenticate user
+    // Validate user
     const user = await getUser(email, password);
 
     if (!user) {
-      console.warn(" LOGIN FAILED: Invalid credentials");
-
       return res.status(401).json({
         success: false,
-        error: "Invalid email or password",
+        message: "Invalid email or password",
+        error: {
+          code: "INVALID_CREDENTIALS",
+          detail: "Invalid email or password",
+        },
       });
     }
 
+    // 3️⃣ Get OAuth client
     const client = await getClient("web_app");
 
     if (!client) {
-      console.error(" LOGIN FAILED: OAuth client not found");
+      console.error("OAuth client not configured");
 
       return res.status(500).json({
         success: false,
-        error: "OAuth client not found",
+        message: "Configuration error",
+        error: {
+          code: "OAUTH_CLIENT_NOT_FOUND",
+          detail: "Authentication service unavailable",
+        },
       });
     }
 
+    // Generate tokens
     const savedToken = await saveToken(client, user);
 
-    if (!savedToken.success) {
-      console.error(" LOGIN FAILED: Token generation failed");
+    if (!savedToken || !savedToken.success || !savedToken.data) {
+      console.error("Token generation failed:", savedToken);
 
       return res.status(500).json({
         success: false,
-        error: "Failed to generate session",
+        message: "Authentication failed",
+        error: {
+          code: "TOKEN_GENERATION_FAILED",
+          detail: "Unable to create session",
+        },
       });
     }
 
-    const {
-      accessToken,
-      accessTokenExpiresAt,
-      refreshToken,
-      refreshTokenExpiresAt,
-    } = savedToken.data;
+    const { accessToken, refreshToken, refreshTokenExpiresAt } =
+      savedToken.data;
 
     const isProd = process.env.NODE_ENV === "production";
 
-    //  Cookie configuration
     const cookieOptions = {
       httpOnly: true,
       secure: isProd,
@@ -65,36 +81,55 @@ async function login(req, res) {
       path: "/",
     };
 
-    //  Set access token cookie
+    //  Set Access Token Cookie
     res.cookie("access_token", accessToken, {
       ...cookieOptions,
-      expires: new Date(accessTokenExpiresAt),
+      maxAge: 30 * 60 * 1000,
     });
 
-    //  Set refresh token cookie
+    //  Set Refresh Token Cookie
     res.cookie("refresh_token", refreshToken, {
       ...cookieOptions,
       expires: new Date(refreshTokenExpiresAt),
     });
 
+    console.log("LOGIN SUCCESS:", {
+      userId: user.uid,
+      email: user.email,
+      verified: user.is_email_verified,
+      durationMs: Date.now() - start,
+    });
+
+    //  Success Response
     return res.status(200).json({
       success: true,
       message: "Login successful",
-      user: {
-        uid: user.uid,
-        email: user.email,
+      data: {
+        user: {
+          uid: user.uid,
+          email: user.email,
+          is_email_verified: user.is_email_verified,
+        },
       },
     });
+
   } catch (err) {
-    console.error("Error message:", err.message);
-    console.error(
-      "Stack trace:",
-      process.env.NODE_ENV === "development" ? err.stack : "[hidden]",
-    );
+    console.error("LOGIN SERVER ERROR:", {
+      message: err.message,
+      stack: process.env.NODE_ENV === "development" ? err.stack : undefined,
+      durationMs: Date.now() - start,
+    });
 
     return res.status(500).json({
       success: false,
-      error: "Server error",
+      message: "Internal server error",
+      error: {
+        code: "SERVER_ERROR",
+        detail:
+          process.env.NODE_ENV === "development"
+            ? err.message
+            : "Something went wrong. Please try again later.",
+      },
     });
   }
 }

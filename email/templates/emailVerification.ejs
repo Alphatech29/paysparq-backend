@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Email Verification</title>
+
+<style>
+/* Mobile */
+@media only screen and (max-width:600px){
+  .container{width:100%!important}
+  .content{padding:24px!important}
+  .otp-text{font-size:26px!important;letter-spacing:6px!important}
+  .center-mobile{text-align:center!important}
+}
+</style>
+</head>
+
+<body style="margin:0;padding:0;background:#f2f4f7;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;font-family:Arial,Helvetica,sans-serif;">
+
+<!-- Preheader -->
+<div style="display:none;font-size:1px;color:#f2f4f7;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">
+Your verification code for <%= site_name %> is <%= otp %>
+</div>
+
+<!-- Wrapper -->
+<div style="padding:30px 10px;background:#f2f4f7;">
+
+  <!-- Card -->
+  <div class="container" style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:10px;overflow:hidden;">
+
+    <!-- Header -->
+    <div style="background:#012b8b;padding:28px 20px;text-align:center;">
+      <img src="<%= webUrl %><%= logoUrl %>" alt="<%= site_name %>" width="120"
+        style="display:block;margin:0 auto;border:0;outline:none;text-decoration:none;">
+    </div>
+
+    <!-- Content -->
+    <div class="content" style="padding:40px 40px 30px 40px;color:#334155;">
+
+      <h2 style="margin:0 0 10px 0;font-size:22px;color:#0f172a;font-weight:bold;">
+        Verify your email address
+      </h2>
+
+      <p style="margin:0 0 20px 0;font-size:14px;line-height:22px;">
+        Hello <strong><%= name || 'there' %></strong>,<br><br>
+        Welcome to <strong><%= site_name %></strong>.
+        Use the verification code below to confirm your email address.
+      </p>
+
+      <!-- OTP BOX -->
+      <div style="text-align:center;margin:20px 0;">
+        <div style="display:inline-block;background:#eff6ff;padding:18px 28px;border-radius:8px;">
+          <span class="otp-text"
+            style="font-family:Courier,monospace;font-size:30px;font-weight:bold;letter-spacing:10px;color:#1d4ed8;">
+            <%= otp %>
+          </span>
+        </div>
+      </div>
+
+      <p style="margin:14px 0 20px 0;font-size:13px;color:#64748b;text-align:center;">
+        This code expires in <strong><%= expiryMinutes %> minutes</strong>
+      </p>
+
+      <!-- Security Notice -->
+      <div style="background:#fff7ed;padding:14px 16px;font-size:13px;color:#9a3412;border-radius:6px;">
+        <strong>Security notice:</strong>
+        Never share this code with anyone. Our staff will never ask for it.
+      </div>
+
+      <p style="margin:22px 0 0 0;font-size:13px;line-height:20px;">
+        If you didn’t request this, you can ignore this email safely.
+      </p>
+
+    </div>
+
+    <!-- Support -->
+    <div style="padding:0 40px 30px 40px;font-size:13px;color:#475569;">
+      Need help? Contact
+      <a href="mailto:<%= supportEmail %>" style="color:#2563eb;text-decoration:none;">
+        <%= supportEmail %>
+      </a>
+    </div>
+
+    <!-- Footer -->
+    <div style="background:#f8fafc;padding:20px;text-align:center;font-size:12px;color:#94a3b8;line-height:18px;">
+      © <%= new Date().getFullYear() %> <%= site_name %><br>
+      <%= supportEmail %>
+    </div>
+
+  </div>
+
+</div>
+
+</body>
+</html>

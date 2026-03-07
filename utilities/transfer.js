@@ -23,7 +23,7 @@ const transferMoney = async (payload) => {
       throw new Error("Invalid recipient details");
     }
 
-    // FIX 1: Cast amount once here to ensure consistent type throughout
+    // Cast amount once here to ensure consistent type throughout
     const amount = Number(payload.amount);
     if (!amount || amount <= 0) {
       throw new Error("Invalid transfer amount");

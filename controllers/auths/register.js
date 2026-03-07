@@ -4,9 +4,6 @@ const { createUser } = require("../../utilities/auth");
 const registerUser = async (req, res) => {
   const { fullname, email, password, phone } = req.body;
 
-  console.log("Registering user with data:", req.body);
-
- 
   const full_name = fullname;
   const phone_number = phone;
 
@@ -31,7 +28,11 @@ const registerUser = async (req, res) => {
 
   } catch (err) {
     console.error("Unexpected error:", err);
-    return res.status(500).json({ success: false, error: "Server error" });
+
+    return res.status(500).json({
+      success: false,
+      error: "Server error",
+    });
   }
 };
 

@@ -1,4 +1,3 @@
-// services/settings.js
 const pool = require("../model/db");
 
 const getAllWebSettings = async () => {

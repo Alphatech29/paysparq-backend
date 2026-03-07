@@ -6,11 +6,6 @@ async function login(req, res) {
   try {
     const { email, password } = req.body;
 
-    console.log("Login attempt:", {
-      email,
-      password,
-    });
-
     // Validate input
     if (!email || !password) {
       return res.status(400).json({
@@ -37,7 +32,7 @@ async function login(req, res) {
       });
     }
 
-    // 3️⃣ Get OAuth client
+    // Get OAuth client
     const client = await getClient("web_app");
 
     if (!client) {
@@ -81,26 +76,19 @@ async function login(req, res) {
       path: "/",
     };
 
-    //  Set Access Token Cookie
+    // Set Access Token Cookie
     res.cookie("access_token", accessToken, {
       ...cookieOptions,
       maxAge: 30 * 60 * 1000,
     });
 
-    //  Set Refresh Token Cookie
+    // Set Refresh Token Cookie
     res.cookie("refresh_token", refreshToken, {
       ...cookieOptions,
       expires: new Date(refreshTokenExpiresAt),
     });
 
-    console.log("LOGIN SUCCESS:", {
-      userId: user.uid,
-      email: user.email,
-      verified: user.is_email_verified,
-      durationMs: Date.now() - start,
-    });
-
-    //  Success Response
+    // Success Response
     return res.status(200).json({
       success: true,
       message: "Login successful",

@@ -21,6 +21,7 @@ dotenv.config();
 
 const authRoute = require("./routes/auths");
 const userRoute = require("./routes/users");
+const generalRoute = require("./routes/general");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -69,6 +70,7 @@ app.use(
  * API ROUTES
  */
 app.use("/api/v1/auth", authRoute);
+app.use("/api/v1/general", generalRoute);
 app.use("/api/v1/users", upload, userRoute);
 
 /**

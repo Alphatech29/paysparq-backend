@@ -1,6 +1,6 @@
 const pool = require("../model/db");
 
-/* Get Wallet */
+/* ---------------- Get Wallet ---------------- */
 
 const getWalletByUserId = async (userId) => {
   const sql = `
@@ -16,7 +16,7 @@ const getWalletByUserId = async (userId) => {
 };
 
 
-/* Get Dedicated Account By User ID */
+/* ---------------- Get Dedicated Account By User ID ---------------- */
 
 const getDedicatedAccountByUserId = async (uid) => {
   const sql = `
@@ -31,10 +31,38 @@ const getDedicatedAccountByUserId = async (uid) => {
   return rows.length ? rows[0] : null;
 };
 
-/* Safe Debit Wallet */
+
+/* ---------------- Get Dedicated Account By Account Number ---------------- */
+
+const getDedicatedAccountByAccountNumber = async (accountNumber) => {
+  const sql = `
+    SELECT *
+    FROM p_dedicated_accounts
+    WHERE account_number = ?
+    LIMIT 1
+  `;
+
+  const [rows] = await pool.execute(sql, [accountNumber]);
+
+  return rows.length ? rows[0] : null;
+};
+
+
+const getWalletTransactionBySessionId = async (sessionId) => {
+  const query = `
+    SELECT id FROM wallet_transactions
+    WHERE session_id = $1
+    LIMIT 1
+  `;
+
+  const { rows } = await db.query(query, [sessionId]);
+  return rows[0];
+};
+
+
+/* ---------------- Safe Debit Wallet ---------------- */
 
 const debitWallet = async (userId, amount) => {
-
   const sql = `
     UPDATE p_wallets
     SET available_balance = available_balance - ?
@@ -52,10 +80,9 @@ const debitWallet = async (userId, amount) => {
 };
 
 
-/* Credit Wallet */
+/* ---------------- Credit Wallet ---------------- */
 
 const creditWallet = async (userId, amount) => {
-
   const sql = `
     UPDATE p_wallets
     SET available_balance = available_balance + ?
@@ -67,9 +94,12 @@ const creditWallet = async (userId, amount) => {
   return result.affectedRows > 0;
 };
 
+
 module.exports = {
   getWalletByUserId,
   getDedicatedAccountByUserId,
+  getDedicatedAccountByAccountNumber,
+  getWalletTransactionBySessionId,
   debitWallet,
   creditWallet
 };

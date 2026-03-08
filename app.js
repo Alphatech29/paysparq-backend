@@ -1,51 +1,28 @@
-process.on("unhandledRejection", (reason) => {
-  console.error("❌ UNHANDLED PROMISE REJECTION");
-  console.error(reason);
-  process.exit(1);
-});
-
-process.on("uncaughtException", (error) => {
-  console.error("❌ UNCAUGHT EXCEPTION");
-  console.error(error);
-  process.exit(1);
-});
-
 const express = require("express");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
-const dotenv = require("dotenv");
-const { initializeMailer } = require("./email/transporter/mailTransporter");
-const upload = require("./middleware/upload");
 
-dotenv.config();
+const helmet = require("helmet");
+const hpp = require("hpp");
+const compression = require("compression");
+const morgan = require("morgan");
+
+const { rateLimiter } = require("./middleware/rateLimit");
+const { botProtection } = require("./middleware/botProtection");
+const { attackShield } = require("./middleware/attackShield");
+const { errorLogger } = require("./middleware/errorLogger");
+
+const upload = require("./middleware/upload");
 
 const authRoute = require("./routes/auths");
 const userRoute = require("./routes/users");
 const generalRoute = require("./routes/general");
 
 const app = express();
-const PORT = process.env.PORT || 5000;
 
 app.set("trust proxy", 1);
 
-/**
- * HTTPS Redirect (Production)
- */
-if (process.env.NODE_ENV === "production") {
-  app.use((req, res, next) => {
-    if (!req.secure) {
-      return res.redirect(301, `https://${req.headers.host}${req.originalUrl}`);
-    }
-    next();
-  });
-}
-
-/**
- * MIDDLEWARE
- */
-app.use(cookieParser());
-app.use(express.json({ limit: "10mb" }));
-
+/* CORS (must run early) */
 const allowedOrigins = [
   process.env.FRONTEND_URL_1,
   process.env.FRONTEND_URL_2,
@@ -66,16 +43,47 @@ app.use(
   })
 );
 
-/**
- * API ROUTES
- */
+/* Handle preflight */
+app.options(/.*/, cors());
+
+/* Core middleware */
+app.use(cookieParser());
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true }));
+
+/* Security headers */
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+  })
+);
+
+/* Prevent HTTP parameter pollution */
+app.use(hpp());
+
+/* Compress responses */
+app.use(compression());
+
+/* Log ONLY errors (status >= 400) */
+app.use(
+  morgan("tiny", {
+    skip: (req, res) => res.statusCode < 400,
+  })
+);
+
+/* Bot & attack protection */
+app.use(botProtection);
+app.use(attackShield);
+
+/* Rate limiter */
+app.use("/api", rateLimiter);
+
+/* Routes */
 app.use("/api/v1/auth", authRoute);
 app.use("/api/v1/general", generalRoute);
 app.use("/api/v1/users", upload, userRoute);
 
-/**
- * HEALTH CHECK
- */
+/* Health check */
 app.get("/health", (req, res) => {
   res.status(200).json({
     status: "ok",
@@ -84,41 +92,15 @@ app.get("/health", (req, res) => {
   });
 });
 
-/**
- * START SERVER
- */
-let server;
-
-const startServer = async () => {
-  try {
-    await initializeMailer();
-
-    server = app.listen(PORT, () => {
-      console.log(
-        `🚀 Server running on ${
-          process.env.NODE_ENV === "production"
-            ? "HTTPS (via proxy)"
-            : `http://localhost:${PORT}`
-        }`
-      );
-    });
-  } catch (error) {
-    console.error("❌ Failed to start server:");
-    console.error(error);
-    process.exit(1);
-  }
-};
-
-startServer();
-
-/**
- * Graceful shutdown (optional but recommended)
- */
-process.on("SIGTERM", () => {
-  console.log("SIGTERM received. Shutting down gracefully...");
-  if (server) {
-    server.close(() => {
-      console.log("Process terminated.");
-    });
-  }
+/* 404 handler */
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    error: "Route not found",
+  });
 });
+
+/* Error logger (must be last) */
+app.use(errorLogger);
+
+module.exports = app;

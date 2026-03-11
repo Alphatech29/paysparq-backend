@@ -225,7 +225,7 @@ const createGiftcardOrder = async (req, res) => {
         res,
         502,
         "PROVIDER_FAILED",
-        "Giftcard provider failed. Wallet refunded."
+        "Purchase faild. Wallet refunded."
       );
     }
 

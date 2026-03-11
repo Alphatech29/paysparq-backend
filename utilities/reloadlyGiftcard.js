@@ -115,8 +115,30 @@ const getGiftcardProductDiscount = async (productId) => {
   return callGiftcardsApi(`/products/${productId}/discounts`);
 };
 
+//Get Giftcard Redeem Code by Transaction ID
+const getRedeemCode = async (transactionId) => {
+  if (!transactionId) {
+    throw new Error("Transaction ID is required");
+  }
+
+  const endpoint = `/orders/transactions/${transactionId}/cards`;
+
+  const data = await callGiftcardsApi(endpoint);
+
+  if (!Array.isArray(data)) {
+    return [];
+  }
+
+  return data.map(card => ({
+    card_number: card.cardNumber,
+    pin_code: card.pinCode || null,
+    redemption_url: card.redemptionUrl || null
+  }));
+};
+
 module.exports = {
   getGiftcardCountries,
   getReloadlyGiftCardProducts,
-  getGiftcardProductDiscount
+  getGiftcardProductDiscount,
+  getRedeemCode
 };

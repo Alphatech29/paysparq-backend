@@ -307,6 +307,30 @@ const updateGiftcardTransactionStatus = async (reference, status) => {
   }
 };
 
+const getUserIdByCustomIdentifier = async (custom_identifier) => {
+  try {
+
+    const sql = `
+      SELECT user_id
+      FROM p_giftcard_transactions
+      WHERE custom_identifier = ?
+      LIMIT 1
+    `;
+
+    const [rows] = await pool.execute(sql, [custom_identifier]);
+
+    if (!rows.length) {
+      return null;
+    }
+
+    return rows[0].user_id;
+
+  } catch (error) {
+    console.error("Error fetching user_id:", error);
+    throw error;
+  }
+};
+
 const updateGiftcardTransactionByCustomIdentifier = async (
   customIdentifier,
   data
@@ -354,5 +378,5 @@ const updateGiftcardTransactionByCustomIdentifier = async (
 };
 
 module.exports = {
-  createGiftcardTrade, createGiftcardTransaction, updateGiftcardTransactionByCustomIdentifier, createTransaction, getTransactionsByUserId, createWalletTransaction, updateTransactionStatus, updateGiftcardTransactionStatus
+  createGiftcardTrade, createGiftcardTransaction, updateGiftcardTransactionByCustomIdentifier, createTransaction, getTransactionsByUserId, createWalletTransaction, updateTransactionStatus, updateGiftcardTransactionStatus, getUserIdByCustomIdentifier
 };

@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Your Gift Card Purchase</title>
+
+<style>
+body{
+  margin:0;
+  padding:0;
+  background:#f2f4f7;
+  font-family:Arial, Helvetica, sans-serif;
+}
+
+@media only screen and (max-width:600px){
+  .container{width:100%!important}
+  .content{padding:24px!important}
+}
+</style>
+
+</head>
+
+<body>
+
+<div style="padding:30px 10px;background:#f2f4f7;">
+
+<div class="container" style="max-width:620px;margin:0 auto;background:#ffffff;border-radius:10px;overflow:hidden;">
+
+<!-- Header -->
+<div style="background:#012b8b;padding:28px;text-align:center;">
+<img src="<%= (webUrl || '') + (logoUrl || '') %>" width="120" alt="<%= companyName %>">
+</div>
+
+<!-- Content -->
+<div class="content" style="padding:40px;color:#334155;">
+
+<h2 style="margin:0 0 12px;color:#0f172a;">
+Your Gift Card Has Been Delivered 🎁
+</h2>
+
+<p style="font-size:14px;">
+Hello <strong><%= name || "Customer" %></strong>,
+</p>
+
+<p style="font-size:14px;line-height:22px;">
+Thank you for purchasing from <strong><%= companyName %></strong>.  
+Your gift card purchase has been completed successfully.  
+Below are the details of your order.
+</p>
+
+<!-- Order Summary -->
+<div style="background:#f8fafc;padding:20px;border-radius:8px;margin-top:20px;font-size:14px;">
+
+<p><strong>Order Reference:</strong> <%= reference %></p>
+<p><strong>Gift Card Brand:</strong> <%= brand_name || "Gift Card" %></p>
+<p><strong>Quantity:</strong> <%= quantity %></p>
+<p><strong>Total Amount:</strong> <%= total_amount %></p>
+<p><strong>Status:</strong> Completed</p>
+
+</div>
+
+<!-- Gift Cards -->
+<div style="margin-top:25px;">
+
+<p style="font-weight:bold;margin-bottom:10px;">
+Your Gift Card Details
+</p>
+
+<% if(cards && cards.length){ %>
+
+<% cards.forEach(function(card, index){ %>
+
+<div style="background:#f8fafc;border-radius:8px;padding:18px;margin-bottom:15px;font-size:14px;">
+
+<p><strong>Card <%= index + 1 %></strong></p>
+
+<p>
+<strong>Code:</strong>
+<span style="background:#ffffff;padding:6px 10px;border-radius:4px;border:1px dashed #cbd5f5;font-weight:bold;">
+<%= card.code || "N/A" %>
+</span>
+</p>
+
+<% if(card.pin){ %>
+<p><strong>PIN:</strong> <%= card.pin %></p>
+<% } %>
+
+<% if(card.redemptionUrl){ %>
+<p>
+<strong>Redeem Link:</strong><br>
+<a href="<%= card.redemptionUrl %>" style="color:#2563eb;text-decoration:none;">
+<%= card.redemptionUrl %>
+</a>
+</p>
+<% } %>
+
+</div>
+
+<% }) %>
+
+<% } else { %>
+
+<p style="font-size:14px;color:#64748b;">
+No gift card details were found. Please contact support.
+</p>
+
+<% } %>
+
+</div>
+
+<!-- Redeem Instructions -->
+<div style="margin-top:20px;font-size:14px;line-height:22px;">
+
+<strong>How to Redeem</strong>
+
+<% if(redeemInstructionConcise){ %>
+
+<p style="margin-top:8px;">
+<%= redeemInstructionConcise %>
+</p>
+
+<% } %>
+
+<% if(redeemInstructionVerbose){ %>
+
+<div style="margin-top:10px;color:#475569;">
+<%- redeemInstructionVerbose %>
+</div>
+
+<% } else { %>
+
+<ul style="padding-left:18px;margin-top:10px;">
+<li>Visit the official <%= brand_name || "gift card provider" %> website.</li>
+<li>Add items to your cart.</li>
+<li>Enter the gift card code during checkout.</li>
+</ul>
+
+<% } %>
+
+</div>
+
+<!-- CTA -->
+<div style="text-align:center;margin-top:30px;">
+
+<a href="<%= dashboardUrl %>"
+style="background:#012b8b;color:#ffffff;padding:12px 24px;text-decoration:none;border-radius:6px;font-size:14px;">
+View Order
+</a>
+
+</div>
+
+<p style="margin-top:25px;font-size:13px;color:#64748b;">
+Please keep your gift card codes safe. Anyone with access to them can redeem the value.
+</p>
+
+</div>
+
+<!-- Support -->
+<div style="padding:0 40px 30px;font-size:13px;color:#475569;">
+Need help? Contact us at
+<a href="mailto:<%= supportEmail %>" style="color:#2563eb;text-decoration:none;">
+<%= supportEmail %>
+</a>
+</div>
+
+<!-- Footer -->
+<div style="background:#f8fafc;padding:30px 40px;color:#475569;font-size:13px;line-height:20px;">
+
+<div style="text-align:center;margin-bottom:15px;">
+<strong style="color:#0f172a;font-size:14px;"><%= companyName %></strong><br>
+<span style="color:#64748b;">
+Secure Digital Gift Card Platform
+</span>
+</div>
+
+<div style="height:1px;background:#e2e8f0;margin:15px 0;"></div>
+
+<div style="text-align:center;color:#64748b;">
+<p style="margin:0;">
+Security Notice: We will never request your password or OTP via email.
+</p>
+</div>
+
+<div style="height:1px;background:#e2e8f0;margin:18px 0;"></div>
+
+<div style="text-align:center;color:#94a3b8;font-size:12px;">
+<p style="margin:0;">
+© <%= year %> <%= companyName %>. All rights reserved.
+</p>
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+</body>
+</html>

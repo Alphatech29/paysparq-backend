@@ -63,6 +63,8 @@ const getWalletTransactionBySessionId = async (sessionId) => {
 /* ---------------- Safe Debit Wallet ---------------- */
 
 const debitWallet = async (userId, amount) => {
+  const debitAmount = Number(amount);
+
   const sql = `
     UPDATE p_wallets
     SET available_balance = available_balance - ?
@@ -70,15 +72,19 @@ const debitWallet = async (userId, amount) => {
     AND available_balance >= ?
   `;
 
-  const [result] = await pool.execute(sql, [amount, userId, amount]);
+  const [result] = await pool.execute(sql, [debitAmount, userId, debitAmount]);
 
   if (result.affectedRows === 0) {
     throw new Error("Insufficient balance");
   }
 
-  return true;
-};
+  const [rows] = await pool.execute(
+    "SELECT available_balance FROM p_wallets WHERE user_id = ?",
+    [userId]
+  );
 
+  return rows[0].available_balance;
+};
 
 /* ---------------- Credit Wallet ---------------- */
 

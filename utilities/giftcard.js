@@ -1,162 +1,102 @@
 const pool = require("../model/db");
 
 async function createGiftcardProduct(data) {
-  //  Normalize Reloadly → DB shape
   const normalized = {
-    product_id: data.product_id ?? data.productId,
-    product_name: data.product_name ?? data.productName,
+    productId: data.productId ?? null,
+    productName: data.productName ?? null,
 
-    global_available: data.global_available ?? data.global ?? false,
+    global: data.global ?? false,
     status: data.status ?? "ACTIVE",
-    supports_preorder: data.supports_preorder ?? data.supportsPreOrder ?? false,
+    supportsPreOrder: data.supportsPreOrder ?? false,
 
-    sender_fee: data.sender_fee ?? data.senderFee ?? 0,
-    sender_fee_percentage:
-      data.sender_fee_percentage ?? data.senderFeePercentage ?? 0,
-    discount_percentage:
-      data.discount_percentage ?? data.discountPercentage ?? 0,
+    senderFee: data.senderFee ?? 0,
+    senderFeePercentage: data.senderFeePercentage ?? 0,
+    discountPercentage: data.discountPercentage ?? 0,
 
-    denomination_type: data.denomination_type ?? data.denominationType,
+    denominationType: data.denominationType ?? null,
 
-    recipient_currency_code:
-      data.recipient_currency_code ?? data.recipientCurrencyCode ?? null,
-    min_recipient_denomination:
-      data.min_recipient_denomination ?? data.minRecipientDenomination ?? null,
-    max_recipient_denomination:
-      data.max_recipient_denomination ?? data.maxRecipientDenomination ?? null,
+    recipientCurrencyCode: data.recipientCurrencyCode ?? null,
+    minRecipientDenomination: data.minRecipientDenomination ?? null,
+    maxRecipientDenomination: data.maxRecipientDenomination ?? null,
 
-    sender_currency_code:
-      data.sender_currency_code ?? data.senderCurrencyCode ?? null,
-    min_sender_denomination:
-      data.min_sender_denomination ?? data.minSenderDenomination ?? null,
-    max_sender_denomination:
-      data.max_sender_denomination ?? data.maxSenderDenomination ?? null,
+    senderCurrencyCode: data.senderCurrencyCode ?? null,
+    minSenderDenomination: data.minSenderDenomination ?? null,
+    maxSenderDenomination: data.maxSenderDenomination ?? null,
 
-    exchange_rate:
-      data.exchange_rate ??
-      data.recipientCurrencyToSenderCurrencyExchangeRate ??
-      1,
+    fixedRecipientDenominations: JSON.stringify(
+      data.fixedRecipientDenominations ?? []
+    ),
 
-    logo_url:
-      data.logo_url ??
-      (Array.isArray(data.logoUrls) ? data.logoUrls[0] : null),
+    fixedSenderDenominations: JSON.stringify(
+      data.fixedSenderDenominations ?? []
+    ),
 
-    brand_id: data.brand_id ?? data.brand?.brandId ?? null,
-    brand_name: data.brand_name ?? data.brand?.brandName ?? null,
-    brand_logo_url: data.brand_logo_url ?? data.brand?.logoUrl ?? null,
+    fixedRecipientToSenderDenominationsMap: JSON.stringify(
+      data.fixedRecipientToSenderDenominationsMap ?? {}
+    ),
 
-    redeem_instruction_concise:
-      data.redeem_instruction_concise ??
+    metadata: JSON.stringify(data.metadata ?? data ?? {}),
+    logoUrls: JSON.stringify(data.logoUrls ?? []),
+
+    /* Brand */
+    brandId: data.brandId ?? data.brand?.brandId ?? null,
+    brandName: data.brandName ?? data.brand?.brandName ?? null,
+    brandLogoUrl: data.brandLogoUrl ?? data.brand?.logoUrl ?? null,
+
+    /* Category */
+    categoryId: data.categoryId ?? data.category?.id ?? null,
+    categoryName: data.categoryName ?? data.category?.name ?? null,
+
+    /* Country */
+    countryIsoName: data.countryIsoName ?? data.country?.isoName ?? null,
+    countryName: data.countryName ?? data.country?.name ?? null,
+    countryFlagUrl: data.countryFlagUrl ?? data.country?.flagUrl ?? null,
+
+    /* Redeem instructions */
+    redeemInstructionConcise:
+      data.redeemInstructionConcise ??
       data.redeemInstruction?.concise ??
       null,
 
-    redeem_instruction_verbose:
-      data.redeem_instruction_verbose ??
+    redeemInstructionVerbose:
+      data.redeemInstructionVerbose ??
       data.redeemInstruction?.verbose ??
       null,
 
-    //  COUNTRY NORMALIZATION
-    country_iso: data.country?.isoName ?? null,
-    country_name: data.country?.name ?? null,
-    country_flag_url: data.country?.flagUrl ?? null,
+    /* Extra requirements */
+    userIdRequired:
+      data.userIdRequired ??
+      data.additionalRequirements?.userIdRequired ??
+      false,
 
-    metadata: data.metadata ?? data
+    recipientCurrencyToSenderCurrencyExchangeRate:
+      data.recipientCurrencyToSenderCurrencyExchangeRate ?? null
   };
 
-  //  Hard guard
-  if (!normalized.product_id) {
-    throw new Error("product_id is required");
+  if (!normalized.productId) {
+    throw new Error("productId is required");
   }
 
+  const columns = Object.keys(normalized);
+  const placeholders = columns.map(() => "?").join(",");
+
+  const updates = columns
+    .filter(col => col !== "productId")
+    .map(col => `${col}=VALUES(${col})`)
+    .join(",");
+
   const sql = `
-    INSERT INTO p_giftcard_products (
-      product_id,
-      product_name,
-      global_available,
-      status,
-      supports_preorder,
-      sender_fee,
-      sender_fee_percentage,
-      discount_percentage,
-      denomination_type,
-      recipient_currency_code,
-      min_recipient_denomination,
-      max_recipient_denomination,
-      sender_currency_code,
-      min_sender_denomination,
-      max_sender_denomination,
-      exchange_rate,
-      logo_url,
-      brand_id,
-      brand_name,
-      brand_logo_url,
-      country_iso,
-      country_name,
-      country_flag_url,
-      redeem_instruction_concise,
-      redeem_instruction_verbose,
-      metadata
-    ) VALUES (
-      ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
-    )
-    ON DUPLICATE KEY UPDATE
-      product_name = VALUES(product_name),
-      status = VALUES(status),
-      exchange_rate = VALUES(exchange_rate),
-      logo_url = VALUES(logo_url),
-      brand_name = VALUES(brand_name),
-      brand_logo_url = VALUES(brand_logo_url),
-      country_iso = VALUES(country_iso),
-      country_name = VALUES(country_name),
-      country_flag_url = VALUES(country_flag_url),
-      redeem_instruction_concise = VALUES(redeem_instruction_concise),
-      redeem_instruction_verbose = VALUES(redeem_instruction_verbose),
-      metadata = VALUES(metadata),
-      updated_at = CURRENT_TIMESTAMP
+    INSERT INTO p_products (${columns.join(",")})
+    VALUES (${placeholders})
+    ON DUPLICATE KEY UPDATE ${updates}
   `;
 
-  const values = [
-    normalized.product_id,
-    normalized.product_name,
-    normalized.global_available,
-    normalized.status,
-    normalized.supports_preorder,
+  const values = Object.values(normalized);
 
-    normalized.sender_fee,
-    normalized.sender_fee_percentage,
-    normalized.discount_percentage,
+  const [result] = await pool.execute(sql, values);
 
-    normalized.denomination_type,
-
-    normalized.recipient_currency_code,
-    normalized.min_recipient_denomination,
-    normalized.max_recipient_denomination,
-
-    normalized.sender_currency_code,
-    normalized.min_sender_denomination,
-    normalized.max_sender_denomination,
-
-    normalized.exchange_rate,
-    normalized.logo_url,
-
-    normalized.brand_id,
-    normalized.brand_name,
-    normalized.brand_logo_url,
-
-    normalized.country_iso,
-    normalized.country_name,
-    normalized.country_flag_url,
-
-    normalized.redeem_instruction_concise,
-    normalized.redeem_instruction_verbose,
-
-    JSON.stringify(normalized.metadata || {})
-  ];
-
-  return pool.execute(sql, values);
+  return result;
 }
-
-
 
 async function bulkUpsertCountries(countries) {
   if (!Array.isArray(countries) || countries.length === 0) {
@@ -192,34 +132,54 @@ async function bulkUpsertCountries(countries) {
   return result.affectedRows;
 }
 
-
 async function emptyGiftcardProductsTable() {
-  const sql = `TRUNCATE TABLE p_giftcard_products`;
+  const sql = `TRUNCATE TABLE p_products`;
   return pool.execute(sql);
 }
 
-
 async function getAllGiftcardProducts() {
   try {
-    const sql = `
-      SELECT *
-      FROM p_giftcard_products
-      ORDER BY created_at DESC
-    `;
+    const [rows] = await pool.execute(`
+      SELECT
+        productId,
+        productName,
+        metadata,
+        categoryName AS category
+      FROM p_products
+      ORDER BY created_at DESC, productId DESC
+    `);
 
-    const [rows] = await pool.execute(sql);
-
-    return rows;
+    return rows || [];
   } catch (error) {
-    // Log full error for debugging (server-side)
-    console.error(" Error fetching giftcard products:", {
-      message: error.message,
-      code: error.code,
-      stack: error.stack
+    console.error("Error fetching giftcard products:", {
+      message: error?.message,
+      code: error?.code
     });
 
-    // Throw clean error for upper layers (controller / API)
     throw new Error("Failed to fetch giftcard products");
+  }
+}
+
+async function getGiftcardProductById(productId) {
+  try {
+    const [rows] = await pool.execute(
+      `
+      SELECT *
+      FROM p_products
+      WHERE productId = ?
+      LIMIT 1
+      `,
+      [productId]
+    );
+
+    return rows[0] || null;
+  } catch (error) {
+    console.error("Error fetching giftcard product:", {
+      message: error?.message,
+      code: error?.code
+    });
+
+    throw new Error("Failed to fetch giftcard product");
   }
 }
 
@@ -240,5 +200,28 @@ async function getAllCountries() {
   }
 }
 
+async function getCountryCurrencyByCode(countryisoCode) {
+  try {
+    const [rows] = await pool.execute(
+      `
+      SELECT *
+      FROM p_country_currencies
+      WHERE cuntries_code = ?
+      LIMIT 1
+      `,
+      [countryisoCode]
+    );
 
-module.exports = {createGiftcardProduct, bulkUpsertCountries, emptyGiftcardProductsTable, getAllGiftcardProducts, getAllCountries};
+    return rows[0] || null;
+
+  } catch (error) {
+    console.error("Error fetching country currency:", {
+      message: error?.message,
+      code: error?.code
+    });
+
+    throw new Error("Failed to fetch country currency");
+  }
+}
+
+module.exports = {createGiftcardProduct, getCountryCurrencyByCode, getGiftcardProductById, bulkUpsertCountries, emptyGiftcardProductsTable, getAllGiftcardProducts, getAllCountries};

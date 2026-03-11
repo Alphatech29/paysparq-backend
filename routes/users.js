@@ -2,7 +2,7 @@ const express = require("express");
 const { getUserWallet, getDedicatedAccount } = require("../controllers/users/wallet");
 const { getUserController } = require("../controllers/users/user");
 const { requireAuth } = require("../middleware/requireAuth");
-const { getAllGiftcardProductsController, getAllCountriesController, getGiftcardProductByIdController } = require("../controllers/users/giftcard");
+const { getAllGiftcardProductsController, getAllCountriesController, getGiftcardProductByIdController, getGiftcardProductDiscountController } = require("../controllers/users/giftcard");
 const { retrieveFlutterwaveBanks } = require("../controllers/flutterwave/bank");
 const { resolveFlutterwaveAccountController } = require("../controllers/flutterwave/verifyAccount");
 const { transferController } = require("../controllers/users/transfer");
@@ -11,14 +11,16 @@ const { getGiftcardBrands } = require("../controllers/users/sellGiftcard");
 const { tradeGiftController } = require("../controllers/users/tradeGift");
 const { getUserTransactions } = require("../controllers/users/history");
 const { paystackWebhook } = require("../utilities/paystackWebhook");
+const { createGiftcardOrder } = require("../controllers/users/orderCard");
+const { reloadlyWebhook } = require("../utilities/reloadlyWebhook");
 
 const userRoute = express.Router();
 
 // ------- User Routes --------- //
 userRoute.get("/wallet", requireAuth, getUserWallet);
 userRoute.get("/user", requireAuth, getUserController);
-userRoute.get("/all-products",requireAuth, getAllGiftcardProductsController);
-userRoute.get("/giftcards/products/:productid",requireAuth, getGiftcardProductByIdController);
+userRoute.get("/all-products", getAllGiftcardProductsController);
+userRoute.get("/products/:productid", requireAuth, getGiftcardProductByIdController);
 userRoute.get("/all-countries", getAllCountriesController);
 userRoute.get("/banks", retrieveFlutterwaveBanks );
 userRoute.post("/resolve-account", resolveFlutterwaveAccountController);
@@ -30,5 +32,8 @@ userRoute.post("/trade-card", requireAuth, tradeGiftController)
 userRoute.get("/history", requireAuth, getUserTransactions)
 userRoute.get("/dedicated-account", requireAuth, getDedicatedAccount)
 userRoute.post("/web-hook", paystackWebhook),
+userRoute.post("/webhook", reloadlyWebhook)
+userRoute.get("/giftcards/products/:productid/discount", getGiftcardProductDiscountController);
+userRoute.post("/card-order",requireAuth, createGiftcardOrder);
 
 module.exports = userRoute;

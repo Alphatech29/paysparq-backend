@@ -1,11 +1,8 @@
-// services/reloadlyGiftcards.js
 const axios = require("axios");
 const { getReloadlyToken } = require("./reloadlyAuth");
 const { getAllWebSettings } = require("./settings");
 
-/**
- * Resolve Reloadly Giftcards Base URL
- */
+//Resolve Reloadly Giftcards Base URL
 const getBaseUrl = async () => {
   const settings = await getAllWebSettings();
   const rawBaseUrl = settings.reloadly_giftcards_base_url;
@@ -17,9 +14,7 @@ const getBaseUrl = async () => {
   return rawBaseUrl.replace(/\/+$/, "");
 };
 
-/**
- * Core Giftcards API Caller
- */
+//Core Giftcards API Caller
 const callGiftcardsApi = async (endpoint, queryParams = {}) => {
   const baseUrl = await getBaseUrl();
   const token = await getReloadlyToken(baseUrl);
@@ -61,49 +56,67 @@ const callGiftcardsApi = async (endpoint, queryParams = {}) => {
   }
 };
 
-/**
- * Public API wrappers
- */
-const getGiftcardCategories = async () => {
-  return callGiftcardsApi("/product-categories");
-};
-
+//Public API wrappers
 const getGiftcardCountries = async () => {
   return callGiftcardsApi("/countries");
 };
 
-const getGiftcardCountryByIso = async (countryCode) => {
-  if (!countryCode) {
-    throw new Error("Country ISO code is required");
-  }
+const getReloadlyGiftCardProducts = async () => {
+  const PAGE_SIZE = 200;
 
-  return callGiftcardsApi(`/countries/${countryCode.toUpperCase()}`);
-};
-
-const getReloadlyGiftCardProductById = async (productId) => {
-  if (!productId || isNaN(productId)) {
-    throw new Error("Valid gift card product ID is required");
-  }
-
-  return callGiftcardsApi(`/products/${productId}`);
-};
-
-const getReloadlyGiftCardProducts = async (params = {}) => {
-  return callGiftcardsApi("/products", {
-    size: params.size || 10,
-    page: params.page || 1,
-    productName: params.productName,
-    countryCode: params.countryCode,
-    productCategoryId: params.productCategoryId,
-    includeRange: params.includeRange,
-    includeFixed: params.includeFixed,
+  // First page to get totalPages
+  const firstPage = await callGiftcardsApi("/products", {
+    page: 0,
+    size: PAGE_SIZE,
   });
+
+  let products = [...firstPage.content];
+  const totalPages = firstPage.totalPages;
+
+  console.log(`[Reloadly] Total pages: ${totalPages}`);
+
+  // Fetch remaining pages in parallel
+  const requests = [];
+
+  for (let page = 1; page < totalPages; page++) {
+    requests.push(
+      callGiftcardsApi("/products", {
+        page,
+        size: PAGE_SIZE,
+      })
+    );
+  }
+
+  const responses = await Promise.all(requests);
+
+  responses.forEach((res) => {
+    products = products.concat(res.content);
+  });
+
+  // Filter ACTIVE products
+  const activeProducts = products.filter(
+    (product) => product.status === "ACTIVE"
+  );
+
+  // Sort alphabetically
+  activeProducts.sort((a, b) =>
+    a.productName.localeCompare(b.productName)
+  );
+
+  return activeProducts;
+};
+
+//Get Giftcard Product Discount by Product ID
+const getGiftcardProductDiscount = async (productId) => {
+  if (!productId) {
+    throw new Error("Product ID is required");
+  }
+
+  return callGiftcardsApi(`/products/${productId}/discounts`);
 };
 
 module.exports = {
-  getGiftcardCategories,
   getGiftcardCountries,
-  getGiftcardCountryByIso,
   getReloadlyGiftCardProducts,
-  getReloadlyGiftCardProductById,
+  getGiftcardProductDiscount
 };

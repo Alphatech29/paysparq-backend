@@ -22,7 +22,7 @@ async function syncGiftcardCountries() {
      * ✅ Step 1: Build payload array
      */
     const payload = countries
-      .filter(c => c.isoName) // safety
+      .filter(c => c.isoName)
       .map(c => ({
         iso_code: c.isoName,
         country_name: c.name,

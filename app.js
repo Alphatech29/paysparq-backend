@@ -103,4 +103,7 @@ app.use((req, res) => {
 /* Error logger (must be last) */
 app.use(errorLogger);
 
+/* Start Giftcard Sync + Cron Scheduler */
+require("./utilities/reloadlyAutoProducts");
+
 module.exports = app;

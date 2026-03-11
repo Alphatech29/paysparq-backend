@@ -1,8 +1,10 @@
 const {
   getAllGiftcardProducts,
   getAllCountries,
+  getGiftcardProductById
 } = require("../../utilities/giftcard");
-const { getReloadlyGiftCardProductById } = require("../../utilities/reloadlyGiftcard")
+
+const { getGiftcardProductDiscount } = require("../../utilities/reloadlyGiftcard");
 
 /**
  * Get all giftcard products
@@ -15,20 +17,18 @@ async function getAllGiftcardProductsController(req, res) {
 
     return res.status(200).json({
       success: true,
-      message: "Giftcard products fetched successfully",
       count: products.length,
       data: products
     });
   } catch (error) {
-    console.error(" Controller Error - Get Giftcard Products", {
+    console.error("Controller Error - Get Giftcard Products", {
       message: error.message,
       stack: error.stack,
       duration_ms: Date.now() - startTime
     });
 
     return res.status(500).json({
-      success: false,
-      message: "Unable to fetch giftcard products"
+      success: false
     });
   }
 }
@@ -49,15 +49,23 @@ async function getGiftcardProductByIdController(req, res) {
       });
     }
 
-    const product = await getReloadlyGiftCardProductById(Number(productid));
+    const product = await getGiftcardProductById(Number(productid));
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: "Giftcard product not found"
+      });
+    }
 
     return res.status(200).json({
       success: true,
       message: "Giftcard product fetched successfully",
       data: product
     });
+
   } catch (error) {
-    console.error(" Controller Error - Get Giftcard Product By ID", {
+    console.error("Controller Error - Get Giftcard Product By ID", {
       message: error.message,
       stack: error.stack,
       duration_ms: Date.now() - startTime
@@ -66,6 +74,43 @@ async function getGiftcardProductByIdController(req, res) {
     return res.status(500).json({
       success: false,
       message: error.message || "Unable to fetch giftcard product"
+    });
+  }
+}
+
+/**
+ * Get giftcard product discount by ID
+ */
+async function getGiftcardProductDiscountController(req, res) {
+  const startTime = Date.now();
+
+  try {
+    const { productid } = req.params;
+
+    if (!productid || isNaN(productid)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid product ID"
+      });
+    }
+
+    const discount = await getGiftcardProductDiscount(Number(productid));
+
+    return res.status(200).json({
+      success: true,
+      data: discount
+    });
+
+  } catch (error) {
+    console.error("Controller Error - Get Giftcard Product Discount", {
+      message: error.message,
+      stack: error.stack,
+      duration_ms: Date.now() - startTime
+    });
+
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Unable to fetch product discount"
     });
   }
 }
@@ -86,7 +131,7 @@ async function getAllCountriesController(req, res) {
       data: countries
     });
   } catch (error) {
-    console.error(" Controller Error - Get Countries", {
+    console.error("Controller Error - Get Countries", {
       message: error.message,
       stack: error.stack,
       duration_ms: Date.now() - startTime
@@ -102,6 +147,6 @@ async function getAllCountriesController(req, res) {
 module.exports = {
   getAllGiftcardProductsController,
   getGiftcardProductByIdController,
-  getAllCountriesController,
-
+  getGiftcardProductDiscountController,
+  getAllCountriesController
 };

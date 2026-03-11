@@ -104,6 +104,30 @@ const createTransaction = async (transactionData) => {
   }
 };
 
+const updateTransactionStatus = async (reference, status) => {
+  try {
+
+    const sql = `
+      UPDATE p_transactions
+      SET status = ?
+      WHERE reference = ?
+    `;
+
+    await pool.execute(sql, [status, reference]);
+
+    return {
+      success: true,
+      reference,
+      status
+    };
+
+  } catch (error) {
+    console.error("Error updating transaction status:", error);
+    throw error;
+  }
+};
+
+
 const getTransactionsByUserId = async (userId) => {
   try {
     if (!userId) {
@@ -188,6 +212,147 @@ const createWalletTransaction = async (walletData) => {
   }
 };
 
+
+const createGiftcardTransaction = async (data) => {
+  try {
+
+    const sql = `
+      INSERT INTO p_giftcard_transactions (
+        reference,
+        custom_identifier,
+        provider_reference,
+        user_id,
+        product_id,
+        product_name,
+        denomination_type,
+        quantity,
+        unit_price,
+        total_price,
+        sender_fee,
+        final_amount,
+        final_amount_ngn,
+        currency,
+        country_code,
+        phone_number,
+        status,
+        provider_amount,
+        provider_discount,
+        provider_fee,
+        provider_total_fee,
+        provider_currency,
+        provider_response
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+
+    const values = [
+      data.reference ?? null,
+      data.custom_identifier ?? null,
+      data.provider_reference ?? null,
+      data.user_id,
+      data.product_id,
+      data.product_name ?? null,
+      data.denomination_type ?? null,
+      data.quantity ?? 0,
+      data.unit_price ?? 0,
+      data.total_price ?? 0,
+      data.sender_fee ?? 0,
+      data.final_amount ?? 0,
+      data.final_amount_ngn ?? 0,
+      data.currency ?? "USD",
+      data.country_code ?? null,
+      data.phone_number ?? null,
+      data.status ?? "processing",
+      data.provider_amount ?? null,
+      data.provider_discount ?? null,
+      data.provider_fee ?? null,
+      data.provider_total_fee ?? null,
+      data.provider_currency ?? null,
+      data.provider_response ? JSON.stringify(data.provider_response) : null
+    ];
+
+    const [result] = await pool.execute(sql, values);
+
+    return {
+      success: true,
+      transaction_id: result.insertId,
+      reference: data.reference
+    };
+
+  } catch (error) {
+    console.error("Error creating giftcard transaction:", error);
+    throw error;
+  }
+};
+
+const updateGiftcardTransactionStatus = async (reference, status) => {
+  try {
+
+    const sql = `
+      UPDATE p_giftcard_transactions
+      SET status = ?
+      WHERE reference = ?
+    `;
+
+    await pool.execute(sql, [status, reference]);
+
+    return {
+      success: true,
+      reference,
+      status
+    };
+
+  } catch (error) {
+    console.error("Error updating giftcard transaction status:", error);
+    throw error;
+  }
+};
+
+const updateGiftcardTransactionByCustomIdentifier = async (
+  customIdentifier,
+  data
+) => {
+  try {
+    const sql = `
+      UPDATE p_giftcard_transactions
+      SET
+        provider_reference = ?,
+        provider_amount = ?,
+        provider_discount = ?,
+        provider_fee = ?,
+        provider_total_fee = ?,
+        provider_currency = ?,
+        provider_response = ?,
+        status = ?
+      WHERE custom_identifier = ?
+    `;
+
+    const values = [
+      data.provider_reference ?? null,
+      data.provider_amount ?? null,
+      data.provider_discount ?? null,
+      data.provider_fee ?? null,
+      data.provider_total_fee ?? null,
+      data.provider_currency ?? null,
+      data.provider_response
+        ? JSON.stringify(data.provider_response)
+        : null,
+      data.status ?? null,
+      customIdentifier,
+    ];
+
+    const [result] = await pool.execute(sql, values);
+
+    return {
+      success: true,
+      affectedRows: result.affectedRows,
+      customIdentifier,
+    };
+  } catch (error) {
+    console.error("Error updating giftcard transaction:", error);
+    throw error;
+  }
+};
+
 module.exports = {
-  createGiftcardTrade, createTransaction, getTransactionsByUserId, createWalletTransaction
+  createGiftcardTrade, createGiftcardTransaction, updateGiftcardTransactionByCustomIdentifier, createTransaction, getTransactionsByUserId, createWalletTransaction, updateTransactionStatus, updateGiftcardTransactionStatus
 };

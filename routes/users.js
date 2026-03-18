@@ -13,6 +13,11 @@ const { getUserTransactions } = require("../controllers/users/history");
 const { paystackWebhook } = require("../utilities/paystackWebhook");
 const { createGiftcardOrder } = require("../controllers/users/orderCard");
 const { reloadlyWebhook } = require("../utilities/reloadlyWebhook");
+const { getReferralsByReferrerUidController } = require("../controllers/users/referrals");
+const { purchaseAirtime } = require("../controllers/users/airtime");
+const { vtpassWebhook } = require("../utilities/vtpassWebhook");
+const { getDataVariationsController } = require("../controllers/users/variations");
+const { purchaseData } = require("../controllers/users/data");
 
 const userRoute = express.Router();
 
@@ -35,5 +40,10 @@ userRoute.post("/web-hook", paystackWebhook),
 userRoute.post("/webhook", reloadlyWebhook)
 userRoute.get("/giftcards/products/:productid/discount", getGiftcardProductDiscountController);
 userRoute.post("/card-order",requireAuth, createGiftcardOrder);
+userRoute.get("/referral",requireAuth, getReferralsByReferrerUidController);
+userRoute.post("/purchaseAirtime",requireAuth, purchaseAirtime)
+userRoute.post("/vtpassWebhook", vtpassWebhook)
+userRoute.get("/data-variations/:serviceID", getDataVariationsController)
+userRoute.post("/purchaseData", requireAuth, purchaseData)
 
 module.exports = userRoute;

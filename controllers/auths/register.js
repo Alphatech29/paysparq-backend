@@ -1,14 +1,19 @@
-// controllers/authController.js
-const { createUser } = require("../../utilities/auth");
+const { createUser } = require("../../utilities/createAccount");
 
 const registerUser = async (req, res) => {
-  const { fullname, email, password, phone } = req.body;
+  const { fullname, email, password, phone, referral_code } = req.body;
 
   const full_name = fullname;
   const phone_number = phone;
 
   try {
-    const result = await createUser(full_name, email, password, phone_number);
+    const result = await createUser(
+      full_name,
+      email,
+      password,
+      phone_number,
+      referral_code || null
+    );
 
     if (!result.success) {
       let statusCode = 400;

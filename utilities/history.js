@@ -377,6 +377,89 @@ const updateGiftcardTransactionByCustomIdentifier = async (
   }
 };
 
+const createVtuTransaction = async (data) => {
+  try {
+
+    const sql = `
+      INSERT INTO p_vtu_transactions (
+        user_id,
+        reference,
+        phone_number,
+        service_id,
+        amount,
+        quantity,
+        status
+      ) VALUES (?, ?, ?, ?, ?, ?, ?)
+    `;
+
+    const values = [
+      data.user_id,
+      data.reference,
+      data.phone_number ?? null,
+      data.service_id ?? null,
+      Number(data.amount ?? 0),
+      Number(data.quantity ?? 1),
+      data.status ?? "pending"
+    ];
+
+    const [result] = await pool.execute(sql, values);
+
+    return {
+      success: true,
+      transaction_id: result.insertId,
+      reference: data.reference
+    };
+
+  } catch (error) {
+    console.error("Error creating airtime transaction:", error);
+    throw error;
+  }
+};
+
+const updateVtuTransaction = async (reference, data) => {
+  try {
+
+    const sql = `
+      UPDATE p_vtu_transactions
+      SET
+        provider_transaction_id = ?,
+        provider_request_id = ?,
+        provider_status = ?,
+        type = ?,
+        commission = ?,
+        total_amount = ?,
+        status = ?,
+        updated_at = NOW()
+      WHERE reference = ?
+    `;
+
+    const values = [
+      data.provider_transaction_id ?? null,
+      data.provider_request_id ?? null,
+      data.provider_status ?? null,
+      data.type ?? null,
+      Number(data.commission ?? 0),
+      Number(data.total_amount ?? 0),
+      data.status ?? "pending",
+      reference
+    ];
+
+    const [result] = await pool.execute(sql, values);
+
+    return {
+      success: true,
+      affectedRows: result.affectedRows,
+      reference
+    };
+
+  } catch (error) {
+
+    console.error("Error updating airtime transaction:", error);
+    throw error;
+
+  }
+};
+
 module.exports = {
-  createGiftcardTrade, createGiftcardTransaction, updateGiftcardTransactionByCustomIdentifier, createTransaction, getTransactionsByUserId, createWalletTransaction, updateTransactionStatus, updateGiftcardTransactionStatus, getUserIdByCustomIdentifier
+  createGiftcardTrade, createGiftcardTransaction, updateGiftcardTransactionByCustomIdentifier, createTransaction, getTransactionsByUserId, createWalletTransaction, updateTransactionStatus, updateGiftcardTransactionStatus, getUserIdByCustomIdentifier, createVtuTransaction, updateVtuTransaction
 };
